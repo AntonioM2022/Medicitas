@@ -1,0 +1,41 @@
+---
+const {especialista, ubicacion, fecha, hora} = Astro.props;
+
+---
+
+<input type="text" class="bg-white m-10 w-1/2 rounded-lg font-bold p-2" placeholder="Buscar">
+<button class="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">Buscar</button>
+
+<div class="overflow-x-auto">
+    <table class="min-w-full bg-white border border-gray-200 shadow-md rounded-lg overflow-hidden">
+      <thead>
+        <tr class="bg-gray-800 text-gray-100 text-left">
+          <th class="py-3 px-6 text-sm font-semibold">Especialista</th>
+          <th class="py-3 px-6 text-sm font-semibold">Ubicación</th>
+          <th class="py-3 px-6 text-sm font-semibold">Fecha</th>
+          <th class="py-3 px-6 text-sm font-semibold">Hora</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200 hover:bg-gray-100">
+          <td class="py-4 px-6 text-gray-800 text-sm">Dr. Juan Pérez</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">Clínica Central</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">30 de Octubre, 2024</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">10:00 AM</td>
+        </tr>
+        <tr class="border-b border-gray-200 hover:bg-gray-100">
+          <td class="py-4 px-6 text-gray-800 text-sm">Dra. Ana Gómez</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">Hospital General</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">2 de Noviembre, 2024</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">12:30 PM</td>
+        </tr>
+        <tr class="border-b border-gray-200 hover:bg-gray-100">
+          <td class="py-4 px-6 text-gray-800 text-sm">Dr. Luis Martínez</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">Clínica San José</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">5 de Noviembre, 2024</td>
+          <td class="py-4 px-6 text-gray-800 text-sm">3:00 PM</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  

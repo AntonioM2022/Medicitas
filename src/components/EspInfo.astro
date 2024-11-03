@@ -1,0 +1,35 @@
+---
+// Definimos las propiedades del componente
+const { foto, nombre, especialidad, contacto, correo, descripcion, consultorios} = Astro.props;
+---
+
+<div class="flex bg-white shadow-md rounded-lg p-4 mb-4 w-full max-w-md ml-20">
+  <!-- Imagen del doctor -->
+  <img src={foto} alt={nombre} class="h-24 w-24 object-cover rounded-full mr-4" />
+
+  <!-- Información del doctor -->
+  <div class="flex-1">
+    <h2 class="text-xl font-semibold">{nombre}</h2>
+    <p class="text-gray-600">{especialidad}</p>
+    <p class="text-gray-500">Contacto: {contacto}</p>
+    <p class="text-gray-500">Correo: {correo}</p>
+    <p class="text-gray-700 mt-2">{descripcion}</p>
+
+    <!-- Botón Ver Más -->
+    <button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+      Ver Más
+    </button>
+  </div>
+</div>
+
+<div class="mx-auto flex flex-row justify-around align-middle">
+    
+        {consultorios.map((consultorio) => (
+            <div class="bg-white font-semibold w-1/2 m-5">
+                {consultorio.nombre}
+            </div>
+        ))}
+
+    
+
+</div>

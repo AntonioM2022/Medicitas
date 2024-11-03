@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Incio de sesion">
+
+    <div class="flex items-center justify-center min-h-screen min-w-screen">
+        <div class="mx-auto w-1/2 h-3/4 flex flex-col justify-center text-center bg-white rounded-xl p-5">
+          <img src="../../public/icons/usr.png" alt="icono usr" class="h-10 w-9 mx-auto m-5" />
+          <label for="usr" class="mt-5 text-m font-semibold">Usuario:</label>
+          <input type="text" id="usr" name="usr" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+          <label for="pwd" class="text-m font-semibold">Contraseña:</label>
+          <input type="password" id="pwd" name="pwd" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+          <div class="flex flex-row justify-center">
+            <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-5 ml-7 mt-5">Iniciar sesión</button>
+            <a href="/register">
+              <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-5 ml-7 mt-5">Registrarte</button>
+            </a>
+          </div>
+        </div>
+      </div>
+
+</Layout>

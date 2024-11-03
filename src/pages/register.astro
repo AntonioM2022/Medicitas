@@ -1,0 +1,63 @@
+---
+const handleRegister = async (event) => {
+  event.preventDefault();
+  const formData = new FormData(event);
+
+  const data = {
+    name: formData.get('name'),
+    last_name: formData.get('lastName'),
+    email: formData.get('email'),
+    userName: formData.get('usrName'),
+    password: formData.get('password'),
+  };
+
+  try {
+    const response = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (response.ok) {
+      alert('Usuario registrado exitosamente');
+    } else {
+      alert('Error al registrar el usuario');
+    }
+  } catch (error) {
+    console.error('Error al enviar el formulario:', error);
+    alert('Error de conexión');
+  }
+};
+
+import Layout from '../layouts/Layout.astro';
+
+---
+
+<Layout title="Registrarse">
+
+    <div class="flex items-center justify-center min-h-screen min-w-screen">
+      <form onsubmit={handleRegister} class="mx-auto w-1/2 h-3/4 flex flex-col justify-center text-center bg-white rounded-xl p-5">
+          <img src="../../public/icons/usr.png" alt="icono usr" class="h-10 w-9 mx-auto m-5" />
+          <label for="name" class="mt-5 text-m font-semibold">Nombre:</label>
+          <input type="text" required id="name" name="name" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+          <label for="lastName" class="text-m font-semibold">Apellido:</label>
+          <input type="text" required id="lastName" name="lastName" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+          <label for="email" class="text-m font-semibold">Correo:</label>
+            <input type="email" required id="email" name="email" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+            <label for="usrName" class="text-m font-semibold">Nombre de usuario:</label>
+            <input type="text"  required id="usrName" name="usrName" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+            <label for="password1" class="text-m font-semibold">Contraseña:</label>
+            <input type="password" required id="password1" name="password1" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+            <label for="password" class="text-m font-semibold">Confirmar contraseña:</label>
+            <input type="password" id="password" required name="password" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+          <div class="flex flex-row justify-center">
+            <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-5 ml-7 mt-5">Crear</button>
+            <a href="/login">
+                <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-5 ml-7 mt-5" type="submit">Cancelar</button>
+            </a>
+          </div>
+        
+      </form>
+    </div>
+
+</Layout>
