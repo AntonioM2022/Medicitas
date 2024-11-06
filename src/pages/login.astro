@@ -5,19 +5,53 @@ import Layout from '../layouts/Layout.astro';
 <Layout title="Incio de sesion">
 
     <div class="flex items-center justify-center min-h-screen min-w-screen">
-        <div class="mx-auto w-1/2 h-3/4 flex flex-col justify-center text-center bg-white rounded-xl p-5">
+      <div class="mx-auto w-1/2 h-3/4 flex flex-col justify-center text-center bg-white rounded-xl p-5">
+        <form  id="authentication"  class="flex flex-col">
           <img src="../../public/icons/usr.png" alt="icono usr" class="h-10 w-9 mx-auto m-5" />
           <label for="usr" class="mt-5 text-m font-semibold">Usuario:</label>
           <input type="text" id="usr" name="usr" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
           <label for="pwd" class="text-m font-semibold">Contraseña:</label>
           <input type="password" id="pwd" name="pwd" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
-          <div class="flex flex-row justify-center">
-            <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-5 ml-7 mt-5">Iniciar sesión</button>
+          <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-5 mx-auto mt-5 w-1/6 ">Iniciar sesión</button>
+        </form>
             <a href="/register">
-              <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-5 ml-7 mt-5">Registrarte</button>
+              <button class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-5 ml-2 mt-5">Registrarte</button>
             </a>
-          </div>
-        </div>
       </div>
+        
+    </div>
 
 </Layout>
+
+<script>
+  document.getElementById('authentication').addEventListener('submit', function(event) {
+    event.preventDefault(); // Evitar que se recargue la página
+
+    // Obtener los datos del formulario
+    const formData = new FormData(event.target);
+    const usr = formData.get('usr');
+    const pwd = formData.get('pwd');
+
+    // Enviar la solicitud GET para verificar el usuario y la contraseña
+    fetch(`http://127.0.0.1:5000/api/usuarios/login?usrName=${encodeURIComponent(usr)}&password=${encodeURIComponent(pwd)}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);  // Si hay error, mostrarlo
+        } else {
+            alert('Usuario verificado exitosamente');
+            if(data.tipo == 1){
+              window.location.href = '/usr/'
+            }else{
+              window.location.href = '/doc/';  
+          }
+        }
+    })
+    .catch(error => {
+        console.error('Error al verificar el usuario:', error);
+        alert('Hubo un problema al verificar el usuario');
+    });
+});
+
+
+</script>

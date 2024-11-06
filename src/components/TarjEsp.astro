@@ -1,6 +1,6 @@
 ---
 // Definimos las propiedades del componente
-const { foto, nombre, especialidad, contacto, correo, descripcion } = Astro.props;
+const { foto, nombre, especialidad, contacto, correo, descripcion, id } = Astro.props;
 ---
 
 <div class="flex bg-white shadow-md rounded-lg p-4 mb-4 w-full max-w-md ml-20">
@@ -15,9 +15,12 @@ const { foto, nombre, especialidad, contacto, correo, descripcion } = Astro.prop
     <p class="text-gray-500">Correo: {correo}</p>
     <p class="text-gray-700 mt-2">{descripcion}</p>
 
-    <!-- Botón Ver Más -->
-    <button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+    <!-- Botón Ver Más con enlace dinámico -->
+    <a href={`/usr/${id}esp`} class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
       Ver Más
-    </button>
+    </a>
+    
+    
+    
   </div>
 </div>

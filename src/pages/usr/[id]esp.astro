@@ -1,0 +1,39 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import HeaderDoc from "../../components/HeaderDoc.astro";
+
+// Función para obtener las rutas de todos los especialistas
+export async function getStaticPaths() {
+  // Llama a tu API para obtener la lista de especialistas
+  const res = await fetch("http://localhost:5000/api/especialistas");
+  const especialistas = await res.json();
+
+  // Retorna las rutas generadas a partir de los IDs
+  return especialistas.map((especialista) => ({
+    params: { id: especialista.id.toString() },
+  }));
+}
+
+// Captura el parámetro `id` de la URL
+const { id } = Astro.params;
+
+// Haz la solicitud a la API para obtener los datos del doctor específico
+const res = await fetch(`http://localhost:5000/api/especialistas/${id}`);
+const doctor = await res.json();
+---
+
+<Layout title={`Perfil de ${doctor.nombre}`}>
+  <HeaderDoc />
+  <div class="flex flex-initial w-1/2 m-5">
+    <img src={doctor.imagen} alt={doctor.nombre} class="h-32 w-32 object-cover rounded-full mx-auto mb-4" />
+    <div class="flex flex-col">
+      <h1 class="text-3xl font-bold mb-2">{doctor.nombre}</h1>
+      <p class="text-gray-500 text-lg"><strong>Especialidad: </strong>{doctor.especialidad}</p>
+      <p class="text-gray-500 text-lg"><strong>Contacto: </strong> {doctor.contacto}</p>
+      <p class="text-gray-500 text-lg"><strong>Correo: </strong> {doctor.email}</p>
+      <p class="text-gray-500 mt-2 text-lg"><strong>Descripción: </strong> {doctor.descripcion || "Sin descripción disponible"}</p>
+    </div>
+  </div>
+
+  
+</Layout>
