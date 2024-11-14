@@ -1,14 +1,14 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import HeaderDoc from "../../components/HeaderDoc.astro";
+import HeaderSesion from "../../components/HeaderDoc.astro";
+import Ubications from "../../components/Ubications.astro";
 
 // Función para obtener las rutas de todos los especialistas
 export async function getStaticPaths() {
-  // Llama a tu API para obtener la lista de especialistas
+  // Llama a la API para obtener la lista de especialistas
   const res = await fetch("http://localhost:5000/api/especialistas");
   const especialistas = await res.json();
 
-  // Retorna las rutas generadas a partir de los IDs
   return especialistas.map((especialista) => ({
     params: { id: especialista.id.toString() },
   }));
@@ -17,13 +17,17 @@ export async function getStaticPaths() {
 // Captura el parámetro `id` de la URL
 const { id } = Astro.params;
 
-// Haz la solicitud a la API para obtener los datos del doctor específico
-const res = await fetch(`http://localhost:5000/api/especialistas/${id}`);
-const doctor = await res.json();
+// Hacer la solicitud a la API para obtener los datos del doctor específico
+const resDoctor = await fetch(`http://localhost:5000/api/especialistas/${id}`);
+const doctor = await resDoctor.json();
+
+// Hacer la solicitud a la API para obtener las ubicaciones del doctor
+const resUbicaciones = await fetch(`http://localhost:5000/api/doctores/${id}/ubicaciones`);
+const ubicaciones = await resUbicaciones.json();
 ---
 
 <Layout title={`Perfil de ${doctor.nombre}`}>
-  <HeaderDoc />
+  <HeaderSesion />
   <div class="flex flex-initial w-1/2 m-5">
     <img src={doctor.imagen} alt={doctor.nombre} class="h-32 w-32 object-cover rounded-full mx-auto mb-4" />
     <div class="flex flex-col">
@@ -35,5 +39,16 @@ const doctor = await res.json();
     </div>
   </div>
 
-  
+  <!-- Sección para mostrar las ubicaciones -->
+  <h2 class="text-3xl font-bold mb-2 ml-5 mt-16">Ubicaciones:</h2>
+  <div class="flex justify-around w-full mt-16">
+    {ubicaciones.map((ubicacion) => (
+      <Ubications 
+        street={ubicacion.calle}
+        number={ubicacion.numero}
+        no={ubicacion.id}
+        doctorId={id}
+      />
+    ))}
+    </div>
 </Layout>

@@ -145,6 +145,190 @@ def obtener_especialista(id):
     except Exception as ex:
         print(f"Error al obtener el especialista: {ex}")
         return jsonify({'error': 'No se puede obtener el especialista'}), 500
+    
+# Nueva ruta para obtener las ubicaciones de un doctor específico
+@app.route('/api/doctores/<int:id_doctor>/ubicaciones', methods=['GET'])
+def obtener_ubicaciones_doctor(id_doctor):
+    try:
+        cursor = conexion.connection.cursor()
+        sql = '''SELECT idlocations, street, number, link, schedules 
+                 FROM locations 
+                 WHERE id_doctor = %s'''
+        cursor.execute(sql, (id_doctor,))
+        datos = cursor.fetchall()
+        
+        ubicaciones = []
+        for fila in datos:
+            ubicacion = {
+                'id': fila[0],
+                'calle': fila[1],
+                'numero': fila[2],
+                'enlace': fila[3],
+                'horarios': fila[4]
+            }
+            ubicaciones.append(ubicacion)
+        
+        cursor.close()
+        return jsonify(ubicaciones), 200
+    except Exception as ex:
+        print(f"Error al obtener las ubicaciones: {ex}")
+        return jsonify({'error': 'No se pueden obtener las ubicaciones'}), 500
+    
+@app.route('/api/ubicaciones', methods=['GET'])
+def obtener_ubicaciones():
+    try:
+        cursor = conexion.connection.cursor()
+        # Modificar la consulta para incluir el id_doctor
+        sql = '''
+            SELECT l.idlocations, l.street, l.number, l.link, l.schedules, l.id_doctor
+            FROM locations l
+        '''
+        cursor.execute(sql)
+        datos = cursor.fetchall()  # Obtener todas las ubicaciones
+        
+        ubicaciones = []
+        for fila in datos:
+            ubicacion = {
+                'id': fila[0],
+                'calle': fila[1],
+                'numero': fila[2],
+                'enlace': fila[3],
+                'horarios': fila[4],
+                'id_doctor': fila[5]  # Añadir id_doctor
+            }
+            ubicaciones.append(ubicacion)
+        
+        cursor.close()  # Cierra el cursor después de usarlo
+        return jsonify(ubicaciones), 200  # Devuelve todas las ubicaciones como una lista
+    except Exception as ex:
+        print(f"Error al obtener las ubicaciones: {ex}")
+        return jsonify({'error': 'No se pueden obtener las ubicaciones'}), 500
+
+
+    
+@app.route('/api/ubicaciones/<int:idlocation>', methods=['GET'])
+def obtener_ubicacion(idlocation):
+    try:
+        # Crear un cursor para ejecutar la consulta SQL
+        cursor = conexion.connection.cursor()
+        
+        # Modificar la consulta para incluir el id_doctor
+        sql = '''
+            SELECT l.idlocations, l.street, l.number, l.link, l.schedules, l.id_doctor
+            FROM locations l
+            WHERE l.idlocations = %s
+        '''
+        cursor.execute(sql, (idlocation,))
+        datos = cursor.fetchone()  # Obtener la ubicación específica
+        
+        # Verificar si se encontró la ubicación
+        if datos:
+            # Crear un diccionario con los datos de la ubicación
+            ubicacion = {
+                'id': datos[0],
+                'calle': datos[1],
+                'numero': datos[2],
+                'enlace': datos[3],
+                'horarios': datos[4],
+                'id_doctor': datos[5]  # Añadir id_doctor
+            }
+            cursor.close()
+            return jsonify(ubicacion), 200  # Devolver la ubicación en formato JSON
+        else:
+            # Si no se encuentra la ubicación
+            cursor.close()
+            return jsonify({'error': 'Ubicación no encontrada'}), 404
+
+    except Exception as ex:
+        print(f"Error al obtener la ubicación: {ex}")
+        return jsonify({'error': 'No se puede obtener la ubicación'}), 500
+
+
+@app.route('/api/citas', methods=['GET', 'POST'])
+def citas():
+    if request.method == 'POST':
+        try:
+            # Obtener los datos de la cita desde la solicitud JSON
+            data = request.get_json()
+            user_id = data.get('user_id')
+            doctor_id = data.get('doctor_id')
+            location_id = data.get('location_id')
+            appointment_date = data.get('appointment_date')  # Formato esperado: "YYYY-MM-DD"
+            appointment_time = data.get('appointment_time')  # Formato esperado: "HH:MM"
+            notes = data.get('notes')  # Opcional
+
+            # Verificar que todos los campos necesarios están presentes
+            if not (user_id and doctor_id and location_id and appointment_date and appointment_time):
+                return jsonify({'error': 'Faltan datos para crear la cita'}), 400
+
+            # Crear la fecha completa de la cita
+            appointment_datetime = f"{appointment_date} {appointment_time}:00"
+
+            # Verificar si ya existe una cita en la misma hora, ignorando los minutos
+            cursor = conexion.connection.cursor()
+            sql_check = '''SELECT * FROM appointments 
+                           WHERE id_doctor = %s 
+                           AND id_ubication = %s 
+                           AND DATE(appointment) = %s 
+                           AND HOUR(appointment) = HOUR(%s)'''
+            cursor.execute(sql_check, (doctor_id, location_id, appointment_date, appointment_datetime))
+            existing_appointment = cursor.fetchone()
+
+            if existing_appointment:
+                # Cerrar cursor y devolver error si ya existe una cita en la misma hora
+                cursor.close()
+                return jsonify({'error': 'Ya existe una cita en este consultorio a la misma hora'}), 400
+
+            # Insertar la nueva cita en la base de datos
+            sql = '''INSERT INTO appointments (id_doctor, id_ubication, id_usr, appointment, status, notes)
+                     VALUES (%s, %s, %s, %s, 'pendiente', %s)'''
+            cursor.execute(sql, (doctor_id, location_id, user_id, appointment_datetime, notes))
+            conexion.connection.commit()  # Confirmar los cambios en la base de datos
+            cursor.close()
+
+            return jsonify({'mensaje': 'Cita creada exitosamente'}), 201  # Cita creada correctamente
+        except Exception as ex:
+            print(f"Error al crear la cita: {ex}")
+            return jsonify({'error': 'No se puede crear la cita'}), 500
+
+    elif request.method == 'GET':
+        try:
+            # Obtener todas las citas de la base de datos
+            cursor = conexion.connection.cursor()
+            sql = '''SELECT a.idappointments, a.appointment, a.status, a.notes,
+                            d.name as doctor_name, d.specialty,
+                            l.street, l.number,
+                            u.name as user_name, u.last_name
+                     FROM appointments a
+                     JOIN doctors d ON a.id_doctor = d.iddoctors
+                     JOIN locations l ON a.id_ubication = l.idlocations
+                     JOIN users u ON a.id_usr = u.idUsers'''
+            cursor.execute(sql)
+            citas = cursor.fetchall()  # Obtener todas las citas
+            
+            # Formatear los resultados en una lista de diccionarios
+            citas_list = []
+            for cita in citas:
+                citas_list.append({
+                    'id': cita[0],
+                    'appointment': cita[1],
+                    'status': cita[2],
+                    'notes': cita[3],
+                    'doctor_name': cita[4],
+                    'specialty': cita[5],
+                    'location': f"{cita[6]} {cita[7]}",
+                    'user_name': f"{cita[8]} {cita[9]}"
+                })
+            cursor.close()
+
+            return jsonify(citas_list), 200  # Enviar la lista de citas como respuesta
+        except Exception as ex:
+            print(f"Error al obtener las citas: {ex}")
+            return jsonify({'error': 'No se pueden obtener las citas'}), 500
+
+
+
+
 
 
 if __name__ == '__main__':

@@ -1,0 +1,170 @@
+---
+// Importar los componentes necesarios
+import Layout from "../../../layouts/Layout.astro";
+import HeaderSesion from "../../../components/HeaderSesion.astro";
+
+// Definir el tipo de una ubicación
+interface Ubicacion {
+  id: number;
+  calle: string;
+  numero: string;
+  enlace: string;
+  horarios: string;
+}
+
+// Captura los parámetros `esp_id` y `ubi_id` de la URL
+const { esp_id, ubi_id } = Astro.params;
+console.log("Doctor ID:", esp_id);  // Verifica el ID del doctor
+console.log("Ubicación ID:", ubi_id);  // Verifica el ID de la ubicación
+
+// Obtener solo la ubicación específica
+const res = await fetch(`http://localhost:5000/api/ubicaciones/${ubi_id}`);
+if (!res.ok) {
+  console.error('Error al obtener los datos de la ubicación');
+  return;
+}
+const ubicacion: Ubicacion = await res.json();
+---
+
+<!-- Verifica si se obtuvo la información de la ubicación -->
+<Layout title={`Información de ubicación`}>
+    <HeaderSesion/>
+    {ubicacion ? (
+      <div class="m-5 w-full" data-esp-id={esp_id} data-ubi-id={ubi_id}>
+        <h1 class="text-3xl font-bold m-8">Calle: {ubicacion.calle}, No: {ubicacion.numero}</h1>
+        <iframe
+          class="rounded-lg mx-auto mt-8"
+          src={ubicacion.enlace} 
+          width="600" 
+          height="450" 
+          style="border:0;" 
+          allowfullscreen 
+          loading="lazy" 
+          referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+
+        <h1 class="text-3xl font-bold mt-8 mb-8">Horario de atención: </h1>
+        <table class=" w-3/4 bg-white border border-gray-200 shadow-md rounded-lg overflow-hidden mx-auto">
+            <thead>
+                <tr class="bg-gray-800 text-gray-100 text-left">
+                    <th class="py-3 px-6 text-sm font-semibold">Dia</th>
+                    <th class="py-3 px-6 text-sm font-semibold">Horario</th>
+                </tr>
+            </thead>
+            <tbody>
+            <tr  class="border-b border-gray-200 hover:bg-gray-100">
+                <td class="py-4 px-6 text-gray-800 text-sm">Lunes</td>
+                <td class="py-4 px-6 text-gray-800 text-sm">8:00 - 18:00</td>
+            </tr>
+            <tr class="border-b border-gray-200 hover:bg-gray-100">
+                <td class="py-4 px-6 text-gray-800 text-sm">Martes</td>
+                <td class="py-4 px-6 text-gray-800 text-sm">8:00 - 18:00</td>
+            </tr>
+            <tr class="border-b border-gray-200 hover:bg-gray-100">
+                <td class="py-4 px-6 text-gray-800 text-sm">Miércoles</td>
+                <td class="py-4 px-6 text-gray-800 text-sm">8:00 - 18:00</td>
+            </tr>
+            <tr class="border-b border-gray-200 hover:bg-gray-100">
+                <td class="py-4 px-6 text-gray-800 text-sm">Jueves</td>
+                <td class="py-4 px-6 text-gray-800 text-sm">8:00 - 18:00</td>
+            </tr>
+            <tr  class="border-b border-gray-200 hover:bg-gray-100">
+                <td class="py-4 px-6 text-gray-800 text-sm">Viernes</td>
+                <td class="py-4 px-6 text-gray-800 text-sm">8:00 - 18:00</td>
+            </tr>
+            <tr  class="border-b border-gray-200 hover:bg-gray-100">
+                <td class="py-4 px-6 text-gray-800 text-sm">Sábado</td>
+                <td class="py-4 px-6 text-gray-800 text-sm">8:00 - 18:00</td>
+            </tr>
+            <tr  class="border-b border-gray-200 hover:bg-gray-100">
+                <td class="py-4 px-6 text-gray-800 text-sm">Domingo</td>
+                <td class="py-4 px-6 text-gray-800 text-sm">Cerrado</td>
+            </tr>
+        </tbody>
+        </table>
+
+        <form id="form" class="flex flex-col mx-auto w-3/4 justify-center">
+            <label class="mt-5 text-m font-semibold" for="Fecha">Seleccionar fecha:</label>
+            <input type="date" id="Fecha" name="Fecha"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5">
+            <label class="mt-5 text-m font-semibold" for="Hora">Hora:</label>
+            <input type="time" id="Hora" name="Hora"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5">
+            <label class="mt-5 text-m font-semibold" for="Comentarios">Comentarios:</label>
+            <textarea id="Comentarios" name="Comentarios"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5"></textarea>
+            <button type="submit" class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm w-1/2 py-2.5 text-center mb-5 mx-auto mt-5">Agendar cita</button>
+        </form>
+      </div>
+    ) : (
+      <p>Información de la ubicación no encontrada</p>
+    )}
+</Layout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('Fecha').setAttribute('min', today);
+    
+
+    async function submitForm(event) {
+      event.preventDefault();
+
+      const userId = 2;
+      const container = document.querySelector('.m-5');  // Div contenedor con los datos de `esp_id` y `ubi_id`
+      const doctorId = container.getAttribute('data-esp-id');  // Extrae `esp_id`
+      const locationId = container.getAttribute('data-ubi-id');  // Extrae `ubi_id`
+      const dateInput = document.getElementById('Fecha').value;
+      const timeInput = document.getElementById('Hora').value;
+      const notesInput = document.getElementById('Comentarios').value;
+
+      // Validación de fecha y hora
+      const appointmentDateTime = new Date(`${dateInput}T${timeInput}`);
+      if (appointmentDateTime < new Date()) {
+        alert('La fecha y hora de la cita deben ser desde hoy en adelante.');
+        return;
+      }if (appointmentDateTime.getDay() === 0) { // 0 = Domingo
+      alert('Los domingos no están disponibles para seleccionar. Por favor elige otro día.');
+      dateInput.value = ''; // Borra la fecha seleccionada
+    }
+
+      const hours = appointmentDateTime.getHours();
+      if (hours < 8 || hours > 18 || (hours === 18 && appointmentDateTime.getMinutes() > 0)) {
+        alert('La cita debe estar entre las 8:00 y 18:00.');
+        return;
+      }
+
+      // Crear el objeto JSON con los datos de la cita
+      const appointmentData = {
+        user_id: userId,
+        doctor_id: parseInt(doctorId),  // Convierte `doctorId` a número
+        location_id: parseInt(locationId),  // Convierte `locationId` a número
+        appointment_date: dateInput,
+        appointment_time: timeInput,
+        notes: notesInput,
+      };
+
+      try {
+        const response = await fetch('http://localhost:5000/api/citas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(appointmentData),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert('Cita creada exitosamente');
+        } else {
+          alert(`Error al crear la cita: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Error en la solicitud:', error);
+        alert('Hubo un problema al crear la cita.');
+      }
+    }
+
+    const formElement = document.getElementById('form');
+    if (formElement) {
+      formElement.addEventListener('submit', submitForm);
+    }
+  });
+</script>
