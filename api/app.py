@@ -1,5 +1,6 @@
 import base64
 from flask import Flask, jsonify, request
+from datetime import datetime
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 from config import config
@@ -325,6 +326,47 @@ def citas():
         except Exception as ex:
             print(f"Error al obtener las citas: {ex}")
             return jsonify({'error': 'No se pueden obtener las citas'}), 500
+
+@app.route('/api/citas/disponibles/<string:appointment_date>/<int:doctor_id>/<int:location_id>', methods=['GET'])
+def obtener_horas_disponibles(appointment_date, doctor_id, location_id):
+    try:
+        # Validar que la fecha esté en el formato correcto
+        datetime.strptime(appointment_date, '%Y-%m-%d')  # Verifica el formato YYYY-MM-DD
+
+        cursor = conexion.connection.cursor()
+
+        # Obtener solo las horas ocupadas con estado 'pendiente'
+        sql = '''SELECT HOUR(appointment) as appointment_hour 
+                 FROM appointments 
+                 WHERE id_doctor = %s 
+                 AND id_ubication = %s 
+                 AND DATE(appointment) = %s 
+                 AND status = 'pendiente' '''
+        cursor.execute(sql, (doctor_id, location_id, appointment_date))
+        ocupadas = [str(row[0]).zfill(2) + ":00" for row in cursor.fetchall()]
+        cursor.close()
+
+        # Crear un rango de horas entre 8:00 y 18:00
+        horas_disponibles = []
+        for h in range(8, 19):  # Esto va a incluir las 18:00
+            hora_str = f"{str(h).zfill(2)}:00"
+            # Verifica si la hora ya está ocupada
+            if hora_str not in ocupadas:
+                horas_disponibles.append(hora_str)
+
+        return jsonify(horas_disponibles), 200
+    except ValueError:
+        return jsonify({'error': 'Formato de fecha inválido. Use el formato YYYY-MM-DD'}), 400
+    except Exception as ex:
+        print(f"Error al obtener horas disponibles: {ex}")
+        return jsonify({'error': 'Error al obtener las horas disponibles'}), 500
+
+
+
+
+
+
+
 
 
 

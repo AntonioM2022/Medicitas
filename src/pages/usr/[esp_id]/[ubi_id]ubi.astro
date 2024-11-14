@@ -87,7 +87,9 @@ const ubicacion: Ubicacion = await res.json();
             <label class="mt-5 text-m font-semibold" for="Fecha">Seleccionar fecha:</label>
             <input type="date" id="Fecha" name="Fecha"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5">
             <label class="mt-5 text-m font-semibold" for="Hora">Hora:</label>
-            <input type="time" id="Hora" name="Hora"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5">
+            <select id="Hora" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5">
+                <option value="">Seleccione una hora</option>
+            </select>
             <label class="mt-5 text-m font-semibold" for="Comentarios">Comentarios:</label>
             <textarea id="Comentarios" name="Comentarios"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5"></textarea>
             <button type="submit" class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm w-1/2 py-2.5 text-center mb-5 mx-auto mt-5">Agendar cita</button>
@@ -102,7 +104,6 @@ const ubicacion: Ubicacion = await res.json();
   document.addEventListener('DOMContentLoaded', () => {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('Fecha').setAttribute('min', today);
-    
 
     async function submitForm(event) {
       event.preventDefault();
@@ -120,11 +121,16 @@ const ubicacion: Ubicacion = await res.json();
       if (appointmentDateTime < new Date()) {
         alert('La fecha y hora de la cita deben ser desde hoy en adelante.');
         return;
-      }if (appointmentDateTime.getDay() === 0) { // 0 = Domingo
-      alert('Los domingos no están disponibles para seleccionar. Por favor elige otro día.');
-      dateInput.value = ''; // Borra la fecha seleccionada
-    }
+      }
 
+      // Verificar que no sea domingo
+      if (appointmentDateTime.getDay() === 0) { // 0 = Domingo
+        alert('Los domingos no están disponibles para seleccionar. Por favor elige otro día.');
+        document.getElementById('Fecha').value = ''; // Borra la fecha seleccionada
+        return;
+      }
+
+      // Verificar que la cita esté en el rango de 8:00 a 18:00
       const hours = appointmentDateTime.getHours();
       if (hours < 8 || hours > 18 || (hours === 18 && appointmentDateTime.getMinutes() > 0)) {
         alert('La cita debe estar entre las 8:00 y 18:00.');
@@ -167,4 +173,42 @@ const ubicacion: Ubicacion = await res.json();
       formElement.addEventListener('submit', submitForm);
     }
   });
+
+document.getElementById('Fecha').addEventListener('change', async (event) => {
+  const dateInput = event.target.value; // Debería estar en formato 'YYYY-MM-DD'
+  
+  // Obtener el ID del doctor sin el texto adicional (como "esp")
+  const container = document.querySelector('.m-5');
+  const doctorId = container.getAttribute('data-esp-id').replace(/\D/g, ''); // Eliminar caracteres no numéricos
+  const locationId = container.getAttribute('data-ubi-id');
+
+  try {
+    // Hacer la solicitud al API con la URL correctamente formada
+    const response = await fetch(`http://localhost:5000/api/citas/disponibles/${dateInput}/${doctorId}/${locationId}`);
+    
+    // Verificar si la respuesta es exitosa
+    if (!response.ok) {
+      throw new Error('Error al obtener las horas disponibles');
+    }
+
+    // Parsear la respuesta JSON
+    const availableHours = await response.json();
+
+    // Limpiar el select de horas
+    const selectHora = document.getElementById('Hora');
+    selectHora.innerHTML = '<option value="">Seleccione una hora</option>'; // Limpiar select
+
+    // Agregar las horas disponibles al select
+    availableHours.forEach(hour => {
+      const option = document.createElement('option');
+      option.value = hour;
+      option.textContent = hour;
+      selectHora.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error al cargar horas disponibles:', error);
+  }
+});
+
+
 </script>
