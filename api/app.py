@@ -28,7 +28,7 @@ def verificar_usuario():
         
         # Conectar a la base de datos y consultar por el usuario y la contraseña
         cursor = conexion.connection.cursor()
-        sql = '''SELECT name, last_name, email, userName, type 
+        sql = '''SELECT idUsers,name, last_name, email, userName, type 
                  FROM users WHERE userName = %s AND password = %s'''
         cursor.execute(sql, (usuario, contraseña))
         datos = cursor.fetchone()  # Obtener un solo usuario que coincida
@@ -38,11 +38,12 @@ def verificar_usuario():
         if datos:
             # Si se encuentra el usuario, devolver los datos
             usuario = {
-                'nombre': datos[0],
-                'apellido': datos[1],
-                'email': datos[2],
-                'usuario': datos[3],
-                'tipo': datos[4]
+                'id': datos[0],
+                'nombre': datos[1],
+                'apellido': datos[2],
+                'email': datos[3],
+                'usuario': datos[4],
+                'tipo': datos[5]
             }
             return jsonify(usuario), 200  # Usuario encontrado y contraseña correcta
         else:
@@ -251,7 +252,7 @@ def citas():
         try:
             # Obtener los datos de la cita desde la solicitud JSON
             data = request.get_json()
-            user_id = data.get('user_id')
+            patient = data.get('patient')
             doctor_id = data.get('doctor_id')
             location_id = data.get('location_id')
             appointment_date = data.get('appointment_date')  # Formato esperado: "YYYY-MM-DD"
@@ -259,7 +260,7 @@ def citas():
             notes = data.get('notes')  # Opcional
 
             # Verificar que todos los campos necesarios están presentes
-            if not (user_id and doctor_id and location_id and appointment_date and appointment_time):
+            if not (patient and doctor_id and location_id and appointment_date and appointment_time):
                 return jsonify({'error': 'Faltan datos para crear la cita'}), 400
 
             # Crear la fecha completa de la cita
@@ -281,9 +282,9 @@ def citas():
                 return jsonify({'error': 'Ya existe una cita en este consultorio a la misma hora'}), 400
 
             # Insertar la nueva cita en la base de datos
-            sql = '''INSERT INTO appointments (id_doctor, id_ubication, id_usr, appointment, status, notes)
+            sql = '''INSERT INTO appointments (id_doctor, id_ubication, name, appointment, status, notes)
                      VALUES (%s, %s, %s, %s, 'pendiente', %s)'''
-            cursor.execute(sql, (doctor_id, location_id, user_id, appointment_datetime, notes))
+            cursor.execute(sql, (doctor_id, location_id, patient, appointment_datetime, notes))
             conexion.connection.commit()  # Confirmar los cambios en la base de datos
             cursor.close()
 
@@ -296,14 +297,12 @@ def citas():
         try:
             # Obtener todas las citas de la base de datos
             cursor = conexion.connection.cursor()
-            sql = '''SELECT a.idappointments, a.appointment, a.status, a.notes,
+            sql = '''SELECT a.idappointments, a.appointment, a.status, a.notes, a.name,
                             d.name as doctor_name, d.specialty,
-                            l.street, l.number,
-                            u.name as user_name, u.last_name
+                            l.street, l.number 
                      FROM appointments a
                      JOIN doctors d ON a.id_doctor = d.iddoctors
-                     JOIN locations l ON a.id_ubication = l.idlocations
-                     JOIN users u ON a.id_usr = u.idUsers'''
+                     JOIN locations l ON a.id_ubication = l.idlocations'''
             cursor.execute(sql)
             citas = cursor.fetchall()  # Obtener todas las citas
             
@@ -315,10 +314,10 @@ def citas():
                     'appointment': cita[1],
                     'status': cita[2],
                     'notes': cita[3],
-                    'doctor_name': cita[4],
-                    'specialty': cita[5],
-                    'location': f"{cita[6]} {cita[7]}",
-                    'user_name': f"{cita[8]} {cita[9]}"
+                    'patient': cita[4],
+                    'doctor_name': cita[5],
+                    'specialty': cita[6],
+                    'location': f"{cita[7]} {cita[8]}",
                 })
             cursor.close()
 
@@ -348,7 +347,7 @@ def obtener_horas_disponibles(appointment_date, doctor_id, location_id):
 
         # Crear un rango de horas entre 8:00 y 18:00
         horas_disponibles = []
-        for h in range(8, 19):  # Esto va a incluir las 18:00
+        for h in range(8, 18):  # Esto va a incluir las 18:00
             hora_str = f"{str(h).zfill(2)}:00"
             # Verifica si la hora ya está ocupada
             if hora_str not in ocupadas:
@@ -361,6 +360,41 @@ def obtener_horas_disponibles(appointment_date, doctor_id, location_id):
         print(f"Error al obtener horas disponibles: {ex}")
         return jsonify({'error': 'Error al obtener las horas disponibles'}), 500
 
+
+@app.route('/api/citas/<int:doctor_id>', methods=['GET'])
+def get_citas_doctor(doctor_id):
+    try:
+        # Obtener todas las citas del doctor con el ID especificado
+        cursor = conexion.connection.cursor()
+        sql = '''SELECT a.idappointments, a.appointment, a.status, a.notes, a.name,
+                        d.name as doctor_name, d.specialty,
+                        l.street, l.number 
+                 FROM appointments a
+                 JOIN doctors d ON a.id_doctor = d.iddoctors
+                 JOIN locations l ON a.id_ubication = l.idlocations
+                 WHERE a.id_doctor = %s'''
+        cursor.execute(sql, (doctor_id,))
+        citas = cursor.fetchall()  # Obtener todas las citas del doctor
+
+        # Formatear los resultados en una lista de diccionarios
+        citas_list = []
+        for cita in citas:
+            citas_list.append({
+                'id': cita[0],
+                'appointment': cita[1],
+                'status': cita[2],
+                'notes': cita[3],
+                'patient': cita[4],
+                'doctor_name': cita[5],
+                'specialty': cita[6],
+                'location': f"{cita[7]} {cita[8]}",
+            })
+        cursor.close()
+
+        return jsonify(citas_list), 200  # Enviar la lista de citas como respuesta
+    except Exception as ex:
+        print(f"Error al obtener las citas del doctor {doctor_id}: {ex}")
+        return jsonify({'error': 'No se pueden obtener las citas del doctor especificado'}), 500
 
 
 

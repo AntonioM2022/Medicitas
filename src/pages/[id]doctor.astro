@@ -1,0 +1,32 @@
+---
+import Layout from "../layouts/Layout.astro";
+import HeaderDoc from "../components/HeaderDoc.astro";
+import Citas from "../components/Citas.astro";
+
+// Obtener el id de la URL (por ejemplo, '8doctor' => '8')
+const rawId = Astro.url.pathname.split('/')[1];  // Esto obtiene '8doctor' de 'http://localhost:4321/8doctor'
+const id = rawId.replace(/[^\d]/g, '');  // Esto elimina cualquier cosa que no sea un número
+
+console.log("ID del doctor:", id);
+
+let citas = [];
+try {
+  if (id) {
+    const response = await fetch(`http://localhost:5000/api/citas/${id}`);
+    if (response.ok) {
+      citas = await response.json();
+    } else {
+      console.error("Error al obtener las citas del doctor");
+    }
+  } else {
+    console.error("ID del doctor no está definido");
+  }
+} catch (error) {
+  console.error("Error en la solicitud de citas:", error);
+}
+---
+
+<Layout title="Citas agendadas">
+  <HeaderDoc />
+  <Citas citas={citas} />
+</Layout>

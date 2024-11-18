@@ -84,14 +84,16 @@ const ubicacion: Ubicacion = await res.json();
         </table>
 
         <form id="form" class="flex flex-col mx-auto w-3/4 justify-center">
+            <label for="fullName" class="mt-5 text-m font-semibold">Nombre completo:</label>
+            <input type="text" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" id="fullName" required >
             <label class="mt-5 text-m font-semibold" for="Fecha">Seleccionar fecha:</label>
-            <input type="date" id="Fecha" name="Fecha"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5">
+            <input type="date" id="Fecha" name="Fecha"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" required>
             <label class="mt-5 text-m font-semibold" for="Hora">Hora:</label>
             <select id="Hora" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5">
                 <option value="">Seleccione una hora</option>
             </select>
             <label class="mt-5 text-m font-semibold" for="Comentarios">Comentarios:</label>
-            <textarea id="Comentarios" name="Comentarios"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5"></textarea>
+            <textarea id="Comentarios" name="Comentarios"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" required></textarea>
             <button type="submit" class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm w-1/2 py-2.5 text-center mb-5 mx-auto mt-5">Agendar cita</button>
         </form>
       </div>
@@ -108,10 +110,10 @@ const ubicacion: Ubicacion = await res.json();
     async function submitForm(event) {
       event.preventDefault();
 
-      const userId = 2;
       const container = document.querySelector('.m-5');  // Div contenedor con los datos de `esp_id` y `ubi_id`
       const doctorId = container.getAttribute('data-esp-id');  // Extrae `esp_id`
       const locationId = container.getAttribute('data-ubi-id');  // Extrae `ubi_id`
+      const fullNameInput = document.getElementById('fullName').value;
       const dateInput = document.getElementById('Fecha').value;
       const timeInput = document.getElementById('Hora').value;
       const notesInput = document.getElementById('Comentarios').value;
@@ -139,7 +141,7 @@ const ubicacion: Ubicacion = await res.json();
 
       // Crear el objeto JSON con los datos de la cita
       const appointmentData = {
-        user_id: userId,
+        patient: fullNameInput,
         doctor_id: parseInt(doctorId),  // Convierte `doctorId` a número
         location_id: parseInt(locationId),  // Convierte `locationId` a número
         appointment_date: dateInput,

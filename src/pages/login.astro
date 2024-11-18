@@ -42,9 +42,11 @@ import Layout from '../layouts/Layout.astro';
             alert('Usuario verificado exitosamente');
             if(data.tipo == 1){
               window.location.href = '/usr/'
-            }else{
-              window.location.href = '/doc/';  
-          }
+            }if(data.tipo == 2){
+              window.location.href = `${data.id}doctor`;  
+            }if(data.tipo == 3){
+              window.location.href = `/admin/`;  
+            }
         }
     })
     .catch(error => {

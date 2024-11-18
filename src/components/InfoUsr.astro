@@ -2,7 +2,7 @@
 const {nombre, apellidos, correo, nombreUsr, contrasena} = Astro.props;
 ---
 <div class="flex items-center justify-center min-h-screen min-w-screen">
-    <div class="mx-auto w-1/2 h-3/4 flex flex-col justify-center text-center bg-purple-400 rounded-xl p-5">
+    <form class="mx-auto w-1/2 h-3/4 flex flex-col justify-center text-center bg-purple-400 rounded-xl p-5">
       <label for="nombre" class="mt-5 text-m font-semibold">Nombre</label>
       <input type="text" id="nombre" name="nombre" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" placeholder={nombre} />
       <label for="apellido" class="mt-5 text-m font-semibold">Apellidos</label>
@@ -13,9 +13,7 @@ const {nombre, apellidos, correo, nombreUsr, contrasena} = Astro.props;
       <input type="text" id="usr" name="usr" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" placeholder={nombreUsr} />
       <label for="pwd" class="text-m font-semibold">Contraseña:</label>
       <input type="text" id="pwd" name="pwd" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" placeholder={contrasena}/>
-      <div class="flex flex-row justify-center">
-        <button class="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">Editar</button>
+      <button class="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mx-auto mb-2 w-1/4">Editar</button>
        
-      </div>
-    </div>
+    </form>
   </div>
