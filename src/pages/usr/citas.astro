@@ -1,9 +1,144 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import HeaderSesion from "../../components/HeaderSesion.astro";
-import Citas from "../../components/Citas.astro";
 ---
+
 <Layout title="Citas">
-    <HeaderSesion/>
-    <Citas/>
-</Layout>;
+  <HeaderSesion />
+
+  <input 
+    type="text" 
+    class="bg-white m-10 w-1/2 rounded-lg font-bold p-2" 
+    placeholder="Buscar"
+  />
+  <button 
+    class="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+  >
+    Buscar
+  </button>
+
+  <div class="overflow-x-auto">
+    <table id="citasTable" class="min-w-full bg-white border border-gray-200 shadow-md rounded-lg overflow-hidden">
+      <thead>
+        <tr class="bg-gray-800 text-gray-100 text-left">
+          <th class="py-3 px-6 text-sm font-semibold text-center">Nombre del doctor</th>
+          <th class="py-3 px-6 text-sm font-semibold text-center">Ubicación</th>
+          <th class="py-3 px-6 text-sm font-semibold text-center">Fecha</th>
+          <th class="py-3 px-6 text-sm font-semibold text-center">Hora</th>
+          <th class="py-3 px-6 text-sm font-semibold text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="citasBody" class="text-center">
+        <!-- Las filas de citas se generarán dinámicamente -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Función que obtiene el ID del usuario desde el token almacenado en localStorage
+    const getUserIdFromToken = () => {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const decodedPayload = JSON.parse(atob(base64));
+          return decodedPayload.id;  // Obtiene el ID del usuario desde el payload
+        } catch (error) {
+          console.error("Error al decodificar el token:", error);
+        }
+      }
+      return null;
+    };
+
+    // Función para eliminar una cita
+    const eliminarCita = (citaId) => {
+      const userId = getUserIdFromToken();
+      if (userId) {
+        fetch(`http://localhost:5000/api/citas/usuario/${userId}?cita_id=${citaId}`, {
+          method: 'DELETE',
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.message) {
+            alert(data.message); // Mostrar mensaje de éxito
+            // Recargar las citas después de eliminar
+            fetchCitas(userId);
+          } else {
+            alert("Error al eliminar la cita.");
+          }
+        })
+        .catch(error => console.error("Error al eliminar la cita:", error));
+      }
+    };
+
+    // Función para renderizar las citas en la tabla
+    const renderCitas = (citas) => {
+  const citasBody = document.getElementById('citasBody');
+  citasBody.innerHTML = ''; // Limpia la tabla antes de renderizar
+
+  citas.forEach(cita => {
+    const row = document.createElement('tr');
+    row.className = "border-b border-gray-200 hover:bg-gray-100";
+
+    // Convierte la fecha y hora del formato GMT al objeto Date
+    const appointmentDate = new Date(cita.appointment);
+
+    // Usamos las opciones para formatear la fecha correctamente
+    const formattedDate = appointmentDate.toLocaleDateString('es-ES'); // Fecha en formato 'dd/mm/yyyy'
+
+    // Obtenemos la hora en UTC para evitar que se ajuste a la zona horaria local
+    const hours = appointmentDate.getUTCHours(); 
+    const minutes = appointmentDate.getUTCMinutes();
+    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`; // Hora en formato 'hh:mm'
+
+    row.innerHTML = `
+      <td class="py-4 px-6 text-gray-800 text-sm">${cita.doctor_name}</td>
+      <td class="py-4 px-6 text-gray-800 text-sm">${cita.location}</td>
+      <td class="py-4 px-6 text-gray-800 text-sm">${formattedDate}</td>
+      <td class="py-4 px-6 text-gray-800 text-sm">${formattedTime}</td>
+      <td class="py-4 px-6 text-center">
+        <button 
+          class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+          data-cita-id="${cita.id}" 
+        >
+          Cancelar
+        </button>
+      </td>
+    `;
+
+    // Añadimos el evento al botón de eliminación
+    const eliminarButton = row.querySelector('button');
+    eliminarButton.addEventListener('click', (event) => {
+      const citaId = event.target.getAttribute('data-cita-id');
+      eliminarCita(citaId); // Llamamos a la función eliminarCita con el ID de la cita
+    });
+
+    citasBody.appendChild(row);
+  });
+};
+
+
+    // Función para obtener las citas y renderizarlas
+    const fetchCitas = (userId) => {
+      fetch(`http://localhost:5000/api/citas/usuario/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+          console.log("Citas del usuario:", data);
+          renderCitas(data); // Llama a la función para renderizar las citas en la tabla
+        })
+        .catch(error => console.error("Error al obtener las citas:", error));
+    };
+
+    // Obtenemos el ID del usuario desde el token
+    const userId = getUserIdFromToken();
+    console.log("ID del usuario:", userId);
+
+    // Si se obtiene el ID del usuario, realizamos la solicitud para obtener las citas
+    if (userId) {
+      fetchCitas(userId); // Llama a la función para cargar las citas
+    } else {
+      console.error("ID del usuario no está definido");
+    }
+  </script>
+</Layout>

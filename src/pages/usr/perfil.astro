@@ -1,9 +1,118 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import HeaderSesion from "../../components/HeaderSesion.astro";
-import InfoUsr from "../../components/InfoUsr.astro";
 ---
+
 <Layout title="Perfil">
     <HeaderSesion/>
-    <InfoUsr/>
-</Layout>;
+    <div class="flex items-center justify-center min-h-screen min-w-screen">
+        <form id="formPerfil" class="mx-auto w-1/2 h-3/4 flex flex-col justify-center text-center bg-purple-400 rounded-xl p-5">
+          <label for="nombre" class="mt-5 text-m font-semibold">Nombre</label>
+          <input type="text" id="nombre" name="nombre" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" />
+          <label for="apellido" class="mt-5 text-m font-semibold">Apellidos</label>
+          <input type="text" id="apellido" name="apellido" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5"  />
+          <label for="email" class="mt-5 text-m font-semibold">Correo</label>
+          <input type="email" id="email" name="email" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5"  />
+          <label for="usr" class="mt-5 text-m font-semibold">Nombre de usuario</label>
+          <input type="text" id="usr" name="usr" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5"  />
+          <label for="pwd" class="text-m font-semibold">Contraseña:</label>
+          <input type="text" id="pwd" name="pwd" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5"/>
+          <button type="button" id="editarBtn" class="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mx-auto mb-2 w-1/4">Editar</button>
+        </form>
+    </div>
+
+<script>
+    // Función que obtiene el ID del usuario desde el token almacenado en localStorage
+    const getUserIdFromToken = () => {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const decodedPayload = JSON.parse(atob(base64));
+                return decodedPayload.id;  // Obtiene el ID del usuario desde el payload
+            } catch (error) {
+                console.error("Error al decodificar el token:", error);
+            }
+        }
+        return null;
+    };
+
+    // Función para renderizar la información del usuario en el formulario
+    const renderInfo = (info) => {
+        const nombre = document.getElementById('nombre');
+        const apellido = document.getElementById('apellido');
+        const email = document.getElementById('email');
+        const usr = document.getElementById('usr');
+        const pwd = document.getElementById('pwd');
+        nombre.value = info.nombre;
+        apellido.value = info.apellido;
+        email.value = info.correo;
+        usr.value = info.usuario;
+        pwd.value = info.contrasena;
+    };
+
+    // Obtenemos el ID del usuario desde el token
+    const userId = getUserIdFromToken();
+    let usuarioOriginal = {};
+
+    // Si se obtiene el ID del usuario, realizamos la solicitud para obtener los datos del usuario
+    if (userId) {
+        fetch(`http://localhost:5000/api/usuarios/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log("Datos del usuario:", data);
+                usuarioOriginal = data; // Guardamos los datos originales del usuario
+                renderInfo(data); // Llama a la función para renderizar los datos en el formulario
+            })
+            .catch(error => console.error("Error al obtener los datos del usuario:", error));
+    } else {
+        console.error("ID del usuario no está definido");
+    }
+
+    // Función para verificar si al menos un dato ha cambiado
+    const verificarCambios = () => {
+        const nombre = document.getElementById('nombre').value;
+        const apellido = document.getElementById('apellido').value;
+        const email = document.getElementById('email').value;
+        const usr = document.getElementById('usr').value;
+        const pwd = document.getElementById('pwd').value;
+
+        return nombre !== usuarioOriginal.nombre || apellido !== usuarioOriginal.apellido || email !== usuarioOriginal.correo || usr !== usuarioOriginal.usuario || pwd !== usuarioOriginal.contrasena;
+    };
+
+    // Evento para el botón "Editar"
+    const editarBtn = document.getElementById('editarBtn');
+    editarBtn.addEventListener('click', () => {
+        if (verificarCambios()) {
+            const datosActualizados = {
+                nombre: document.getElementById('nombre').value,
+                apellido: document.getElementById('apellido').value,
+                correo: document.getElementById('email').value,
+                usuario: document.getElementById('usr').value,
+                contrasena: document.getElementById('pwd').value
+            };
+
+            // Enviar solicitud PUT para actualizar el usuario
+            fetch(`http://localhost:5000/api/usuarios/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(datosActualizados),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Usuario actualizado:', data);
+                    alert('Usuario actualizado con éxito');
+                })
+                .catch(error => {
+                    console.error('Error al actualizar el usuario:', error);
+                    alert('No se pudo actualizar el usuario');
+                });
+        } else {
+            alert('No se ha realizado ningún cambio');
+        }
+    });
+</script>
+</Layout>

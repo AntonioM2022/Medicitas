@@ -1,9 +1,14 @@
 import base64
+import jwt
+import datetime
 from flask import Flask, jsonify, request
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 from config import config
+
+
+
 
 app = Flask(__name__)
 CORS(app)
@@ -16,6 +21,9 @@ app.config.from_object(config['development'])  # Asegúrate de usar el entorno a
 conexion = MySQL(app)
 
 # Ruta para verificar si el usuario y la contraseña existen en la base de datos
+# Clave secreta para firmar el token
+SECRET_KEY = 'hola'
+
 @app.route('/api/usuarios/login', methods=['GET'])
 def verificar_usuario():
     try:
@@ -28,7 +36,7 @@ def verificar_usuario():
         
         # Conectar a la base de datos y consultar por el usuario y la contraseña
         cursor = conexion.connection.cursor()
-        sql = '''SELECT idUsers,name, last_name, email, userName, type 
+        sql = '''SELECT idUsers, name, last_name, email, userName, type 
                  FROM users WHERE userName = %s AND password = %s'''
         cursor.execute(sql, (usuario, contraseña))
         datos = cursor.fetchone()  # Obtener un solo usuario que coincida
@@ -36,7 +44,7 @@ def verificar_usuario():
         cursor.close()
 
         if datos:
-            # Si se encuentra el usuario, devolver los datos
+            # Si se encuentra el usuario, crear el token con el id del usuario
             usuario = {
                 'id': datos[0],
                 'nombre': datos[1],
@@ -45,7 +53,24 @@ def verificar_usuario():
                 'usuario': datos[4],
                 'tipo': datos[5]
             }
-            return jsonify(usuario), 200  # Usuario encontrado y contraseña correcta
+
+            # Crear un token con el ID del usuario, válido por 1 hora
+            # Crear un token con el ID del usuario, válido por 1 hora
+            token_data = {
+                'id': usuario['id'],
+                'exp': datetime.utcnow() + timedelta(hours=1)
+            }   
+
+            token = jwt.encode(token_data, SECRET_KEY, algorithm='HS256')
+
+            # Devolver el usuario junto con el token
+            response = {
+                'usuario': usuario,
+                'token': token
+            }
+
+            return jsonify(response), 200  # Usuario encontrado y contraseña correcta
+
         else:
             # Si no se encuentra el usuario o la contraseña no es correcta
             return jsonify({'error': 'Usuario o contraseña incorrectos'}), 404
@@ -149,32 +174,62 @@ def obtener_especialista(id):
         return jsonify({'error': 'No se puede obtener el especialista'}), 500
     
 # Nueva ruta para obtener las ubicaciones de un doctor específico
-@app.route('/api/doctores/<int:id_doctor>/ubicaciones', methods=['GET'])
-def obtener_ubicaciones_doctor(id_doctor):
-    try:
-        cursor = conexion.connection.cursor()
-        sql = '''SELECT idlocations, street, number, link, schedules 
-                 FROM locations 
-                 WHERE id_doctor = %s'''
-        cursor.execute(sql, (id_doctor,))
-        datos = cursor.fetchall()
-        
-        ubicaciones = []
-        for fila in datos:
-            ubicacion = {
-                'id': fila[0],
-                'calle': fila[1],
-                'numero': fila[2],
-                'enlace': fila[3],
-                'horarios': fila[4]
-            }
-            ubicaciones.append(ubicacion)
-        
-        cursor.close()
-        return jsonify(ubicaciones), 200
-    except Exception as ex:
-        print(f"Error al obtener las ubicaciones: {ex}")
-        return jsonify({'error': 'No se pueden obtener las ubicaciones'}), 500
+from flask import request
+
+@app.route('/api/doctores/<int:id_doctor>/ubicaciones', methods=['GET', 'POST'])
+def manejar_ubicaciones_doctor(id_doctor):
+    if request.method == 'GET':
+        try:
+            cursor = conexion.connection.cursor()
+            sql = '''SELECT idlocations, street, number, link, schedules 
+                     FROM locations 
+                     WHERE id_doctor = %s'''
+            cursor.execute(sql, (id_doctor,))
+            datos = cursor.fetchall()
+            
+            ubicaciones = []
+            for fila in datos:
+                ubicacion = {
+                    'id': fila[0],
+                    'calle': fila[1],
+                    'numero': fila[2],
+                    'enlace': fila[3],
+                    'horarios': fila[4]
+                }
+                ubicaciones.append(ubicacion)
+            
+            cursor.close()
+            return jsonify(ubicaciones), 200
+        except Exception as ex:
+            print(f"Error al obtener las ubicaciones: {ex}")
+            return jsonify({'error': 'No se pueden obtener las ubicaciones'}), 500
+
+    elif request.method == 'POST':
+        try:
+            # Obtener los datos del cuerpo de la solicitud
+            datos = request.json
+            calle = datos.get('calle')
+            numero = datos.get('numero')
+            enlace = datos.get('enlace')
+            horarios = datos.get('horarios')
+
+            # Validar que los datos requeridos estén presentes
+            if not all([calle, numero, enlace, horarios]):
+                return jsonify({'error': 'Faltan datos requeridos'}), 400
+
+            # Insertar la nueva ubicación en la base de datos
+            cursor = conexion.connection.cursor()
+            sql = '''INSERT INTO locations (street, number, link, schedules, id_doctor)
+                     VALUES (%s, %s, %s, %s, %s)'''
+            cursor.execute(sql, (calle, numero, enlace, horarios, id_doctor))
+            conexion.connection.commit()
+            cursor.close()
+
+            return jsonify({'message': 'Ubicación agregada correctamente'}), 201
+        except Exception as ex:
+            print(f"Error al agregar la ubicación: {ex}")
+            return jsonify({'error': 'No se pudo agregar la ubicación'}), 500
+
     
 @app.route('/api/ubicaciones', methods=['GET'])
 def obtener_ubicaciones():
@@ -252,7 +307,7 @@ def citas():
         try:
             # Obtener los datos de la cita desde la solicitud JSON
             data = request.get_json()
-            patient = data.get('patient')
+            patient = data.get('id_usr')
             doctor_id = data.get('doctor_id')
             location_id = data.get('location_id')
             appointment_date = data.get('appointment_date')  # Formato esperado: "YYYY-MM-DD"
@@ -282,7 +337,7 @@ def citas():
                 return jsonify({'error': 'Ya existe una cita en este consultorio a la misma hora'}), 400
 
             # Insertar la nueva cita en la base de datos
-            sql = '''INSERT INTO appointments (id_doctor, id_ubication, name, appointment, status, notes)
+            sql = '''INSERT INTO appointments (id_doctor, id_ubication, id_user, appointment, status, notes)
                      VALUES (%s, %s, %s, %s, 'pendiente', %s)'''
             cursor.execute(sql, (doctor_id, location_id, patient, appointment_datetime, notes))
             conexion.connection.commit()  # Confirmar los cambios en la base de datos
@@ -366,12 +421,14 @@ def get_citas_doctor(doctor_id):
     try:
         # Obtener todas las citas del doctor con el ID especificado
         cursor = conexion.connection.cursor()
-        sql = '''SELECT a.idappointments, a.appointment, a.status, a.notes, a.name,
-                        d.name as doctor_name, d.specialty,
+        sql = '''SELECT a.idappointments, a.appointment, a.status, a.notes, 
+                        u.name AS patient_name, u.last_name AS patient_last_name, u.email AS patient_email,
+                        d.name AS doctor_name, d.specialty,
                         l.street, l.number 
                  FROM appointments a
                  JOIN doctors d ON a.id_doctor = d.iddoctors
                  JOIN locations l ON a.id_ubication = l.idlocations
+                 JOIN users u ON a.id_user = u.idusers  -- Relación con la tabla de usuarios
                  WHERE a.id_doctor = %s'''
         cursor.execute(sql, (doctor_id,))
         citas = cursor.fetchall()  # Obtener todas las citas del doctor
@@ -384,10 +441,11 @@ def get_citas_doctor(doctor_id):
                 'appointment': cita[1],
                 'status': cita[2],
                 'notes': cita[3],
-                'patient': cita[4],
-                'doctor_name': cita[5],
-                'specialty': cita[6],
-                'location': f"{cita[7]} {cita[8]}",
+                'patient': f"{cita[4]} {cita[5]}",  # Nombre completo del paciente
+                'patient_email': cita[6],
+                'doctor_name': cita[7],
+                'specialty': cita[8],
+                'location': f"{cita[9]} {cita[10]}"
             })
         cursor.close()
 
@@ -398,9 +456,135 @@ def get_citas_doctor(doctor_id):
 
 
 
+@app.route('/api/citas/usuario/<int:id_usuario>', methods=['GET', 'DELETE'])
+def obtener_citas_usuario(id_usuario):
+    try:
+        # Si el método es GET, se obtienen las citas del usuario
+        if request.method == 'GET':
+            cursor = conexion.connection.cursor()
+            sql = '''SELECT a.idappointments, a.appointment, a.status, a.notes, u.name AS patient_name, 
+                            d.name AS doctor_name, d.specialty, l.street, l.number
+                     FROM appointments a
+                     JOIN doctors d ON a.id_doctor = d.iddoctors
+                     JOIN locations l ON a.id_ubication = l.idlocations
+                     JOIN users u ON a.id_user = u.idusers
+                     WHERE a.id_user = %s'''  # Filtra por el id del usuario
+            cursor.execute(sql, (id_usuario,))
+            citas = cursor.fetchall()  # Obtener todas las citas del usuario
+
+            # Formatear los resultados en una lista de diccionarios
+            citas_list = []
+            for cita in citas:
+                citas_list.append({
+                    'id': cita[0],
+                    'appointment': cita[1],
+                    'status': cita[2],
+                    'notes': cita[3],
+                    'patient_name': cita[4],
+                    'doctor_name': cita[5],
+                    'specialty': cita[6],
+                    'location': f"{cita[7]} {cita[8]}",
+                })
+            cursor.close()
+            return jsonify(citas_list), 200  # Enviar la lista de citas como respuesta
+
+        # Si el método es DELETE, eliminamos una cita específica
+        elif request.method == 'DELETE':
+            cita_id = request.args.get('cita_id')  # Obtén el id de la cita desde los parámetros de la solicitud
+            if not cita_id:
+                return jsonify({'error': 'ID de cita no proporcionado'}), 400
+
+            cursor = conexion.connection.cursor()
+            sql = '''DELETE FROM appointments WHERE idappointments = %s AND id_user = %s'''
+            cursor.execute(sql, (cita_id, id_usuario))  # Eliminar la cita para ese usuario específico
+            conexion.connection.commit()  # Confirmar la eliminación en la base de datos
+            cursor.close()
+
+            return jsonify({'message': 'Cita eliminada con éxito'}), 200
+
+    except Exception as ex:
+        print(f"Error al manejar las citas del usuario {id_usuario}: {ex}")
+        return jsonify({'error': 'No se puede procesar la solicitud'}), 500
 
 
 
+@app.route('/api/usuarios/<int:id>', methods=['GET', 'PUT'])
+def gestionar_usuario(id):
+    if request.method == 'GET':
+        try:
+            # Crear un cursor para ejecutar la consulta SQL
+            cursor = conexion.connection.cursor()
+
+            # Modificar la consulta para obtener los datos del usuario por ID
+            sql = '''SELECT idUsers, name, last_name, email, userName, password
+                     FROM users WHERE idUsers = %s'''
+            cursor.execute(sql, (id,))
+            datos = cursor.fetchone()  # Obtener un solo usuario que coincida con el ID
+
+            # Verificar si el usuario existe
+            if datos:
+                usuario = {
+                    'id': datos[0],
+                    'nombre': datos[1],
+                    'apellido': datos[2],
+                    'correo': datos[3],
+                    'usuario': datos[4],
+                    'contrasena': datos[5]
+                }
+                cursor.close()
+                return jsonify(usuario), 200  # Devolver los datos del usuario
+            else:
+                cursor.close()
+                return jsonify({'error': 'Usuario no encontrado'}), 404  # Si no existe el usuario
+        except Exception as ex:
+            print(f"Error al obtener el usuario: {ex}")
+            return jsonify({'error': 'No se puede obtener el usuario'}), 500
+
+    elif request.method == 'PUT':
+        try:
+            # Obtener los datos enviados en la solicitud PUT (suponiendo que es un JSON)
+            datos_actualizados = request.get_json()
+
+            # Validar que los datos requeridos estén presentes
+            if not datos_actualizados.get('nombre') or not datos_actualizados.get('apellido') or not datos_actualizados.get('correo') or not datos_actualizados.get('usuario') or not datos_actualizados.get('contrasena'):
+                return jsonify({'error': 'Faltan datos necesarios para actualizar el usuario'}), 400
+
+            # Crear un cursor para ejecutar la consulta SQL
+            cursor = conexion.connection.cursor()
+
+            # Modificar la consulta para actualizar los datos del usuario
+            sql = '''UPDATE users
+                     SET name = %s, last_name = %s, email = %s, userName = %s, password = %s
+                     WHERE idUsers = %s'''
+            cursor.execute(sql, (datos_actualizados['nombre'], datos_actualizados['apellido'], datos_actualizados['correo'], datos_actualizados['usuario'], datos_actualizados['contrasena'], id))
+            
+            # Confirmar la actualización
+            conexion.connection.commit()
+
+            # Verificar si se actualizó algún registro
+            if cursor.rowcount > 0:
+                cursor.close()
+                return jsonify({'message': 'Usuario actualizado con éxito'}), 200
+            else:
+                cursor.close()
+                return jsonify({'error': 'Usuario no encontrado'}), 404  # Si no existe el usuario para actualizar
+        except Exception as ex:
+            print(f"Error al actualizar el usuario: {ex}")
+            return jsonify({'error': 'No se puede actualizar el usuario'}), 500
+
+
+@app.route('/api/doctores/<int:id_doctor>/ubicaciones/<int:id_ubicacion>', methods=['DELETE'])
+def eliminar_ubicacion(id_doctor, id_ubicacion):
+    try:
+        cursor = conexion.connection.cursor()
+        sql = "DELETE FROM locations WHERE id_doctor = %s AND idlocations = %s"
+        cursor.execute(sql, (id_doctor, id_ubicacion))
+        conexion.connection.commit()
+        cursor.close()
+        return jsonify({'message': 'Ubicación eliminada correctamente'}), 200
+    except Exception as ex:
+        print(f"Error al eliminar la ubicación: {ex}")
+        return jsonify({'error': 'No se puede eliminar la ubicación'}), 500
 
 
 

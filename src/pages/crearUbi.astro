@@ -1,0 +1,157 @@
+---
+import Layout from "../layouts/Layout.astro"
+import HeaderDoc from "../components/HeaderDoc.astro"
+---
+
+<Layout title="Crear ubicación">
+    <HeaderDoc />
+    <h1 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-4xl dark:text-white pl-5">Agregar nueva ubicación:</h1>
+    <form id="form" class="flex flex-col mx-auto w-1/2 justify-center pb-16">
+        <label for="calle" class="mt-5 text-m font-semibold">Calle:</label>
+        <input type="text" id="calle" name="calle" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" required>
+        <label for="numero" class="mt-5 text-m font-semibold">Número:</label>
+        <input type="text" id="numero" name="numero" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" required>
+        <label for="link" class="mt-5 text-m font-semibold">Link de la ubicación:</label>
+        <input type="text" id="link" name="link" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" required>
+        <label for="horarios" class="mt-5 text-m font-semibold">Horarios:</label>
+        <input type="text" id="horarios" name="horarios" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" required>
+
+        <button type="submit" class="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm w-1/2 py-2.5 text-center mb-5 mx-auto mt-5">
+            Crear ubicación
+        </button>
+    </form>
+
+    <div class="overflow-x-auto pb-16">
+        <table id="ubicacionesTable" class="min-w-full bg-white border border-gray-200 shadow-md rounded-lg overflow-hidden">
+            <thead>
+                <tr class="bg-gray-800 text-gray-100 text-left">
+                    <th class="py-3 px-6 text-sm font-semibold text-center">Calle</th>
+                    <th class="py-3 px-6 text-sm font-semibold text-center">Número</th>
+                    <th class="py-3 px-6 text-sm font-semibold text-center">Link</th>
+                    <th class="py-3 px-6 text-sm font-semibold text-center">Horario</th>
+                    <th class="py-3 px-6 text-sm font-semibold text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="ubicacionesBody" class="text-center">
+                <!-- Las filas de ubicaciones se generarán dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const getUserIdFromToken = () => {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const decodedPayload = JSON.parse(atob(base64));
+                    return decodedPayload.id; // Obtiene el ID del usuario desde el payload
+                } catch (error) {
+                    console.error("Error al decodificar el token:", error);
+                }
+            }
+            return null;
+        };
+
+        const renderUbicaciones = (ubicaciones) => {
+            const ubiBody = document.getElementById('ubicacionesBody');
+            ubiBody.innerHTML = ''; // Limpia la tabla antes de renderizar
+
+            ubicaciones.forEach(ubi => {
+                const row = document.createElement('tr');
+                row.className = "border-b border-gray-200 hover:bg-gray-100";
+
+                row.innerHTML = `
+                    <td class="py-4 px-6 text-gray-800 text-sm">${ubi.calle}</td>
+                    <td class="py-4 px-6 text-gray-800 text-sm">${ubi.numero}</td>
+                    <td class="py-4 px-6 text-gray-800 text-sm">${ubi.enlace}</td>
+                    <td class="py-4 px-6 text-gray-800 text-sm">${ubi.horarios}</td>
+                    <td class="py-4 px-6 text-center">
+                        <button 
+                            class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                            data-ubi-id="${ubi.id}" 
+                        >
+                            Eliminar
+                        </button>
+                    </td>
+                `;
+
+                // Añadimos el evento al botón de eliminación
+                const eliminarButton = row.querySelector('button');
+                eliminarButton.addEventListener('click', (event) => {
+                    const ubiId = event.target.getAttribute('data-ubi-id');
+                    eliminarUbi(ubiId); // Llamamos a la función eliminarUbi con el ID de la ubicación
+                });
+
+                ubiBody.appendChild(row);
+            });
+        };
+
+        const fetchUbi = (userId) => {
+            fetch(`http://localhost:5000/api/doctores/${userId}/ubicaciones`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Ubicaciones del usuario:", data);
+                    renderUbicaciones(data);
+                })
+                .catch(error => console.error("Error al obtener las ubicaciones:", error));
+        };
+
+        const addUbi = (event) => {
+            event.preventDefault();
+            const userId = getUserIdFromToken();
+            const form = document.getElementById('form');
+            const formData = new FormData(form);
+
+            const data = {
+                calle: formData.get('calle'),
+                numero: formData.get('numero'),
+                enlace: formData.get('link'),
+                horarios: formData.get('horarios')
+            };
+
+            fetch(`http://localhost:5000/api/doctores/${userId}/ubicaciones`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        form.reset();
+                        fetchUbi(userId);
+                    } else {
+                        console.error("Error al crear la ubicación");
+                    }
+                })
+                .catch(error => console.error("Error en la solicitud:", error));
+        };
+
+        const eliminarUbi = (ubiId) => {
+            const userId = getUserIdFromToken();
+            fetch(`http://localhost:5000/api/doctores/${userId}/ubicaciones/${ubiId}`, {
+                method: 'DELETE'
+            })
+                .then(response => {
+                    if (response.ok) {
+                        fetchUbi(userId); // Refrescar la tabla después de eliminar
+                    } else {
+                        console.error("Error al eliminar la ubicación");
+                    }
+                })
+                .catch(error => console.error("Error en la solicitud:", error));
+        };
+
+        const userId = getUserIdFromToken();
+        if (userId) {
+            fetchUbi(userId);
+        } else {
+            console.error("ID del usuario no está definido");
+        }
+
+        const form = document.getElementById('form');
+        form.addEventListener('submit', addUbi);
+    </script>
+</Layout>

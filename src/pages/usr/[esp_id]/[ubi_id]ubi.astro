@@ -24,6 +24,7 @@ if (!res.ok) {
   return;
 }
 const ubicacion: Ubicacion = await res.json();
+
 ---
 
 <!-- Verifica si se obtuvo la información de la ubicación -->
@@ -84,8 +85,6 @@ const ubicacion: Ubicacion = await res.json();
         </table>
 
         <form id="form" class="flex flex-col mx-auto w-3/4 justify-center">
-            <label for="fullName" class="mt-5 text-m font-semibold">Nombre completo:</label>
-            <input type="text" class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" id="fullName" required >
             <label class="mt-5 text-m font-semibold" for="Fecha">Seleccionar fecha:</label>
             <input type="date" id="Fecha" name="Fecha"  class="w-3/4 mx-auto bg-gray-300 rounded-lg m-5" required>
             <label class="mt-5 text-m font-semibold" for="Hora">Hora:</label>
@@ -103,78 +102,100 @@ const ubicacion: Ubicacion = await res.json();
 </Layout>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('Fecha').setAttribute('min', today);
+  function getUserIdFromToken() {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const decodedPayload = JSON.parse(atob(base64));
+      return decodedPayload.id;  // Obtiene el ID del usuario desde el payload
+    } catch (error) {
+      console.error("Error al decodificar el token:", error);
+    }
+  }
+  return null;  // Si no se encuentra el token o hay un error, retorna null
+}
 
-    async function submitForm(event) {
-      event.preventDefault();
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('Fecha').setAttribute('min', today);
 
-      const container = document.querySelector('.m-5');  // Div contenedor con los datos de `esp_id` y `ubi_id`
-      const doctorId = container.getAttribute('data-esp-id');  // Extrae `esp_id`
-      const locationId = container.getAttribute('data-ubi-id');  // Extrae `ubi_id`
-      const fullNameInput = document.getElementById('fullName').value;
-      const dateInput = document.getElementById('Fecha').value;
-      const timeInput = document.getElementById('Hora').value;
-      const notesInput = document.getElementById('Comentarios').value;
+  async function submitForm(event) {
+    event.preventDefault();
 
-      // Validación de fecha y hora
-      const appointmentDateTime = new Date(`${dateInput}T${timeInput}`);
-      if (appointmentDateTime < new Date()) {
-        alert('La fecha y hora de la cita deben ser desde hoy en adelante.');
-        return;
-      }
+    const container = document.querySelector('.m-5');  // Div contenedor con los datos de `esp_id` y `ubi_id`
+    const doctorId = container.getAttribute('data-esp-id');  // Extrae `esp_id`
+    const locationId = container.getAttribute('data-ubi-id');  // Extrae `ubi_id`
+    const dateInput = document.getElementById('Fecha').value;
+    const timeInput = document.getElementById('Hora').value;
+    const notesInput = document.getElementById('Comentarios').value;
 
-      // Verificar que no sea domingo
-      if (appointmentDateTime.getDay() === 0) { // 0 = Domingo
-        alert('Los domingos no están disponibles para seleccionar. Por favor elige otro día.');
-        document.getElementById('Fecha').value = ''; // Borra la fecha seleccionada
-        return;
-      }
-
-      // Verificar que la cita esté en el rango de 8:00 a 18:00
-      const hours = appointmentDateTime.getHours();
-      if (hours < 8 || hours > 18 || (hours === 18 && appointmentDateTime.getMinutes() > 0)) {
-        alert('La cita debe estar entre las 8:00 y 18:00.');
-        return;
-      }
-
-      // Crear el objeto JSON con los datos de la cita
-      const appointmentData = {
-        patient: fullNameInput,
-        doctor_id: parseInt(doctorId),  // Convierte `doctorId` a número
-        location_id: parseInt(locationId),  // Convierte `locationId` a número
-        appointment_date: dateInput,
-        appointment_time: timeInput,
-        notes: notesInput,
-      };
-
-      try {
-        const response = await fetch('http://localhost:5000/api/citas', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(appointmentData),
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-          alert('Cita creada exitosamente');
-        } else {
-          alert(`Error al crear la cita: ${result.error}`);
-        }
-      } catch (error) {
-        console.error('Error en la solicitud:', error);
-        alert('Hubo un problema al crear la cita.');
-      }
+    // Obtener el ID del usuario desde el token
+    const userId = getUserIdFromToken(); // Decodifica el token y obtiene el id
+    if (!userId) {
+      alert("No se pudo obtener el ID del usuario.");
+      return;
     }
 
-    const formElement = document.getElementById('form');
-    if (formElement) {
-      formElement.addEventListener('submit', submitForm);
+    // Validación de fecha y hora
+    const appointmentDateTime = new Date(`${dateInput}T${timeInput}`);
+    if (appointmentDateTime < new Date()) {
+      alert('La fecha y hora de la cita deben ser desde hoy en adelante.');
+      return;
     }
-  });
+
+    // Verificar que no sea domingo
+    if (appointmentDateTime.getDay() === 0) { // 0 = Domingo
+      alert('Los domingos no están disponibles para seleccionar. Por favor elige otro día.');
+      document.getElementById('Fecha').value = ''; // Borra la fecha seleccionada
+      return;
+    }
+
+    // Verificar que la cita esté en el rango de 8:00 a 18:00
+    const hours = appointmentDateTime.getHours();
+    if (hours < 8 || hours > 18 || (hours === 18 && appointmentDateTime.getMinutes() > 0)) {
+      alert('La cita debe estar entre las 8:00 y 18:00.');
+      return;
+    }
+
+    // Crear el objeto JSON con los datos de la cita
+    const appointmentData = {
+      id_usr: userId,  // Usa el ID del usuario del token
+      doctor_id: parseInt(doctorId),  // Convierte `doctorId` a número
+      location_id: parseInt(locationId),  // Convierte `locationId` a número
+      appointment_date: dateInput,
+      appointment_time: timeInput,
+      notes: notesInput,
+    };
+    console.log('Datos de la cita:', appointmentData);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/citas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(appointmentData),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert('Cita creada exitosamente');
+      } else {
+        alert(`Error al crear la cita: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error en la solicitud:', error);
+      alert('Hubo un problema al crear la cita.');
+    }
+  }
+
+  const formElement = document.getElementById('form');
+  if (formElement) {
+    formElement.addEventListener('submit', submitForm);
+  }
+});
 
 document.getElementById('Fecha').addEventListener('change', async (event) => {
   const dateInput = event.target.value; // Debería estar en formato 'YYYY-MM-DD'
